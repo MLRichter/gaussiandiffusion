@@ -1,6 +1,7 @@
 import os
 
 import torch
+import torchvision
 from tokenizers import Tokenizer
 from torch.nn import Module
 from torch import nn
@@ -156,7 +157,9 @@ def validate(latent_encoder: nn.Module,
              val_dataloader: DataLoader,
              val_scrop_size: int,
              device: str,
-             diffuzz_sampler: DDPMSampler
+             diffuzz_sampler: DDPMSampler,
+             logger: Logger,
+             itr: int
              ):
     diffusion_model.eval()
     # TODO: Validation code goes here
@@ -178,6 +181,10 @@ def validate(latent_encoder: nn.Module,
                                     max_length=txt_tokenizer.model_max_length, return_tensors="pt")
             clip_text_embeddings = txt_model(**clip_tokens, output_hidden_states=True).last_hidden_state
 
+            clip_tokens_uncond = txt_tokenizer([""]*len(captions), truncation=True, padding="max_length",
+                                        max_length=txt_tokenizer.model_max_length, return_tensors="pt")
+            clip_text_embeddings_uncond = txt_model(**clip_tokens_uncond, output_hidden_states=True).last_hidden_state
+
             t = (1-torch.rand(images.size(0), device=device)).add(0.001).clamp(0.001, 1.0)
             t = diffuzz.scale_t(t, val_scrop_size/256)
             latents = latent_encoder.encode(images)[0]
@@ -192,4 +199,65 @@ def validate(latent_encoder: nn.Module,
                     pred_v = diffusion_model(noised_latents, t, clip_text_embeddings, return_dict=False)
 
                 pred = diffuzz.x0_from_v(noised_latents, pred_v, t)
+
+            with torch.cuda.amp.autocast(dtype=torch.bfloat16):
+                result_cfg_15 = diffuzz.sample(diffusion_model, {
+                    'encoder_hidden_states': clip_text_embeddings, 'return_dict': False
+                }, latents.shape, unconditional_inputs={
+                    'encoder_hidden_states': clip_text_embeddings_uncond, 'return_dict': False
+                }, cfg=1.5, t_scaler=(256 // 8) / 256)
+
+                result_cfg_15_uncond = diffuzz.sample(diffusion_model, {
+                    'encoder_hidden_states': clip_text_embeddings_uncond, 'return_dict': False
+                }, latents.shape, unconditional_inputs={
+                    'encoder_hidden_states': clip_text_embeddings_uncond, 'return_dict': False
+                }, cfg=1.5, t_scaler=(256 // 8) / 256)
+
+                result_cfg_7 = diffuzz.sample(diffusion_model, {
+                    'encoder_hidden_states': clip_text_embeddings, 'return_dict': False
+                }, latents.shape, unconditional_inputs={
+                    'encoder_hidden_states': clip_text_embeddings_uncond, 'return_dict': False
+                }, cfg=7, t_scaler=(256 // 8) / 256)
+
+                noised_images = torch.cat(
+                    [latent_encoder
+                     .decode
+                     (noised_latents[i:i + 1])
+                     .clamp(0, 1) for i in range(len(noised_latents))], dim=0)
+
+                pred_images = torch.cat(
+                    [latent_encoder
+                     .decode
+                     (pred[i:i + 1])
+                     .clamp(0, 1) for i in range(len(pred))], dim=0)
+
+                cfg_15_images = torch.cat(
+                    [latent_encoder
+                     .decode
+                     (result_cfg_15[i:i + 1])
+                     .clamp(0, 1) for i in range(len(result_cfg_15))], dim=0)
+
+                cfg_15_uncond_images = torch.cat(
+                    [latent_encoder
+                     .decode
+                     (result_cfg_15_uncond[i:i + 1])
+                     .clamp(0, 1) for i in range(len(result_cfg_15))], dim=0)
+
+                cfg_7_images = torch.cat(
+                    [latent_encoder
+                     .decode
+                     (result_cfg_7[i:i + 1])
+                     .clamp(0, 1) for i in range(len(result_cfg_15))], dim=0)
+
+                img = torch.cat([
+                    torch.cat([i for i in images.cpu()], dim=-1),
+                    torch.cat([i for i in noised_images.cpu()], dim=-1),
+                    torch.cat([i for i in pred_images.cpu()], dim=-1),
+                    torch.cat([i for i in cfg_15_images.cpu()], dim=-1),
+                    torch.cat([i for i in cfg_15_uncond_images.cpu()], dim=-1),
+                    torch.cat([i for i in cfg_7_images.cpu()], dim=-1)
+                ], dim=-2)
+                save_path = os.path.join(logger.save_path, "collages", f"{itr}.jpg")
+                logger.log_images(img, save_path)
+
     diffusion_model.train()

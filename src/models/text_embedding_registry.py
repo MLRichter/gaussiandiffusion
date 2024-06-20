@@ -1,3 +1,4 @@
+from torchtools.utils import Diffuzz2
 from transformers import AutoTokenizer, CLIPTextModel, CLIPVisionModel
 from typing import Tuple
 
