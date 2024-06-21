@@ -140,11 +140,21 @@ def train(
 
 
             # TODO: Generate Images
-            collage_img = ...
-
-            # Store Images
-            save_path = os.path.join(log_path, f'images/train_{i:06d}.jpg')
-            logger.log_images(collage_img, save_path)
+            validate(
+                latent_encoder=latent_encoder,
+                diffusion_model=diffusion_model,
+                txt_tokenizer=tokenizer,
+                txt_model=text_model,
+                diffuzz=diffuzz,
+                loss_target=loss_target,
+                dtype=dtype,
+                val_dataloader=val_dataloader,
+                val_crop=val_crop,
+                device=device,
+                diffuzz_sampler=diffuzz_sampler,
+                logger=logger,
+                itr=i
+            )
 
 
 def validate(latent_encoder: nn.Module,
@@ -155,7 +165,7 @@ def validate(latent_encoder: nn.Module,
              loss_target: str,
              dtype,
              val_dataloader: DataLoader,
-             val_scrop_size: int,
+             val_crop: int,
              device: str,
              diffuzz_sampler: DDPMSampler,
              logger: Logger,
@@ -186,21 +196,21 @@ def validate(latent_encoder: nn.Module,
             clip_text_embeddings_uncond = txt_model(**clip_tokens_uncond, output_hidden_states=True).last_hidden_state
 
             t = (1-torch.rand(images.size(0), device=device)).add(0.001).clamp(0.001, 1.0)
-            t = diffuzz.scale_t(t, val_scrop_size/256)
+            t = diffuzz.scale_t(t, val_crop/256)
             latents = latent_encoder.encode(images)[0]
             noised_latents, noise = diffuzz.diffuse(latents, t)
             if loss_target == 'e':
-                with torch.cuda.amp.autocast(dtype=torch.bfloat16):
+                with torch.cuda.amp.autocast(dtype=dtype):
                     pred_e = diffusion_model(noised_latents, t, clip_text_embeddings, return_dict=False)
 
                 pred = diffuzz.undiffuse(noised_latents, t, torch.zeros_like(t), pred_e, sampler=diffuzz_sampler)[0]
             elif loss_target == 'v':
-                with torch.cuda.amp.autocast(dtype=torch.bfloat16):
+                with torch.cuda.amp.autocast(dtype=dtype):
                     pred_v = diffusion_model(noised_latents, t, clip_text_embeddings, return_dict=False)
 
                 pred = diffuzz.x0_from_v(noised_latents, pred_v, t)
 
-            with torch.cuda.amp.autocast(dtype=torch.bfloat16):
+            with torch.cuda.amp.autocast(dtype=dtype):
                 result_cfg_15 = diffuzz.sample(diffusion_model, {
                     'encoder_hidden_states': clip_text_embeddings, 'return_dict': False
                 }, latents.shape, unconditional_inputs={
