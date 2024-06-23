@@ -110,7 +110,6 @@ def check_autoresume_possible(log_dir: str):
 
 def autoresume(log_dir: str,
                model: Module,
-               disc: Module,
                optim: Optimizer,
                desc_optim: Optimizer,
                sched: LRScheduler,
@@ -121,16 +120,11 @@ def autoresume(log_dir: str,
                ) -> int:
     weight_path = Path(log_dir) / "models" / "model.pt"
     checkpoint = torch.load(weight_path)
-    snr_sched.iter = int(checkpoint["snr_sched_iter"])
     model.load_state_dict(checkpoint['state_dict'])  # , strict=False)
-    disc.load_state_dict(checkpoint['disc_state_dict'])  # , strict=False)
     start_iter = checkpoint['last_iter'] + 1
     optim.load_state_dict(checkpoint['optim_state_dict'])
-    desc_optim.load_state_dict(checkpoint['disc_optim_state_dict'])
     sched.last_epoch = checkpoint['last_iter']
-    desc_sched.last_epoch = checkpoint['last_iter']
     scaler_m.load_state_dict(checkpoint["scaler_m"])
-    scaler_d.load_state_dict(checkpoint["scaler_d"])
     print("Resuming from", weight_path, "at", start_iter, "steps")
     return start_iter
 

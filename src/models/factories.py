@@ -1,3 +1,7 @@
+from typing import Tuple
+
+import torch
+from tokenizers.tokenizers import Tokenizer
 from warmup_scheduler import GradualWarmupScheduler
 
 from src import datasets
@@ -19,12 +23,18 @@ def get_model(model_name: str, device: str, *args, **kwargs) -> nn.Module:
     return model_registry.__dict__[model_name](device, *args, **kwargs)
 
 
-def get_text_embedding(embedding_name: str, device: str, *args, **kwargs) -> nn.Module:
-    return text_encoder_registry.__dict__[embedding_name](device, *args, **kwargs)
+def get_text_embedding(embedding_name: str, device: str, *args, **kwargs) -> Tuple[nn.Module, Tokenizer]:
+    model, tokenizers =  text_encoder_registry.__dict__[embedding_name](device, *args, **kwargs)
+    model.eval().requires_grad_(False)
+    return model, tokenizers
 
 
 def get_latent_encoder(vae_name: str, weight_path: str, device: str, *args, **kwargs) -> nn.Module:
-    return vae_registry.__dict__[vae_name](weight_pat=weight_path, device=device, *args, **kwargs)
+    vae = vae_registry.__dict__[vae_name](device=device, *args, **kwargs)
+    checkpoint = torch.load(weight_path)
+    vae.load_state_dict(checkpoint['state_dict'])  # , strict=False)
+    vae.eval().requires_grad_(False)
+    return vae
 
 
 def get_optimizer(opt: str, model: nn.Module, lr: float, *args, **kwargs) -> optim.Optimizer:

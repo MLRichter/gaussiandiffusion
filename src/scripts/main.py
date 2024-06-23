@@ -12,7 +12,8 @@ from torchtools.utils import Diffuzz2
 from torchtools.utils.diffusion2 import DDPMSampler
 
 from src.logging_utils import PrintLogger, JsonLogger, JsonWandbLogger, DummyLogger
-from src.models.factories import get_model, get_discriminator, get_dataset, get_optimizer, get_scheduler
+from src.models.factories import get_model, get_discriminator, get_dataset, get_optimizer, get_scheduler, \
+    get_latent_encoder, get_text_embedding
 from src.training.train_cstm import train_cstm
 
 from src.training.train_txt_guided_ldm import train
@@ -20,6 +21,7 @@ from src.training.utils import create_log_dir, check_autoresume_possible, autore
     load_model_for_finetuneing
 from src.training.utils import is_root, is_distributed, init_distributed_mode
 from src.target_schedulers import ConstantSNR_Target, LinearSNR_Target
+
 
 
 
@@ -43,18 +45,14 @@ def main():
     parser.add_argument('--val_crop_size', default=128, type=int, help='Validation crop size')
 
     # loss weights
-    # TODO: Add loss target as option
     # model selection
     parser.add_argument('--model_name', default='standard_ctms_v1', type=str, help='Model name')
-    # TODO: Add names for losses
     parser.add_argument('--loss_target', default='v', type=str, help='loss target')
     parser.add_argument('--loss_weighting', default='p2', type=str, help='loss target')
 
     # scheduler and optimizer
     parser.add_argument('--optimizer', default='adam', type=str, help='Optimizer for the model')
-    #parser.add_argument('--optimizer_disc', default='adam', type=str, help='Optimizer for the discriminator')
     parser.add_argument('--scheduler', default='gradual_warmup', type=str, help='LR Scheduler')
-    #parser.add_argument('--scheduler_disc', default='gradual_warmup', type=str, help='LR Scheduler for the discriminator')
 
     # dataset
     parser.add_argument('--dataset_name', default='coco_dataset', type=str, help='Dataset name')
@@ -153,7 +151,7 @@ def main():
 
     latent_encoder = get_latent_encoder(model_name=model_name, device=device, filepath=vae_weights)
     model = get_model(model_name=model_name, device=device)
-    txt_tokenizer, txt_model = get_text_model(model_name=model_name, device=device)
+    txt_tokenizer, txt_model = get_text_embedding(model_name=model_name, device=device)
 
     dataset_train = get_dataset(dataset_name=dataset_name, path=dataset_path,
                                 subset="train", size=train_size, crop_size=train_size)
