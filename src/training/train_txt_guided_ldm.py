@@ -32,7 +32,7 @@ def train(
         diffuzz: Diffuzz2,
         logger: Logger,
         crop: RandomCrop,
-        val_crop: RandomCrop,
+        val_crop: int,
         input_dim: int,
         log_path: str,
         loss_weighting: str = "p2",
