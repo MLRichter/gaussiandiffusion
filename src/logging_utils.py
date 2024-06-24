@@ -62,7 +62,7 @@ class JsonLogger:
 
 
 class JsonWandbLogger:
-    def __init__(self, save_path: str, project_name: str = "VAE-Training-Ablation", **kwargs):
+    def __init__(self, save_path: str, project_name: str = "VAE-Diffusion-Train", **kwargs):
         name = _postprocess_model_name(kwargs['model_name'])
 
         self.save_path = save_path
