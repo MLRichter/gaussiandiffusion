@@ -217,6 +217,9 @@ def validate(latent_encoder: nn.Module,
                     'encoder_hidden_states': clip_text_embeddings_uncond, 'return_dict': False
                 }, cfg=1.5, t_scaler=(256 // 8) / 256)
 
+                print("DEBUG")
+                print(type(result_cfg_15), result_cfg_15)
+
                 result_cfg_15_uncond = diffuzz.sample(diffusion_model, {
                     'encoder_hidden_states': clip_text_embeddings_uncond, 'return_dict': False
                 }, latents.shape, unconditional_inputs={
