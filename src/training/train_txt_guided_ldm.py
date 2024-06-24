@@ -117,7 +117,7 @@ def train(
         grad_norm = nn.utils.clip_grad_norm_(diffusion_model.parameters(), 1.0)
 
         # Logging
-        pbar.set_postfix({
+        metrics = {
             'bs': images.size(0),
             'gas': update_freq,
             'tbs': images.size(0) * update_freq,
@@ -126,17 +126,13 @@ def train(
             'grad_norm': grad_norm.item() / images.size(0),
             'lr': optimizer.param_groups[0]['lr'],
             'total_steps': scheduler.last_epoch,
-        })
+        }
+        pbar.set_postfix(metrics)
 
         if (i == 0 or i % print_every == 0) and is_root(rank):
-            # TODO: Do Evaluation
-            val_metrics: dict = ...
 
-            # TODO: Save Results
-            train_metrics: dict = {}
 
-            val_metrics.update(train_metrics)
-            logger.log_metrics(metrics=val_metrics)
+
 
 
             # TODO: Generate Images
@@ -155,6 +151,8 @@ def train(
                 logger=logger,
                 itr=i
             )
+
+            logger.log_metrics(metrics=metrics)
 
 
 def validate(latent_encoder: nn.Module,
