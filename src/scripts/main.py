@@ -147,7 +147,7 @@ def main():
 
     latent_encoder = get_latent_encoder(vae_name=latent_encoder_name, device=device, weight_path=latent_encoder_weights)
     model = get_model(model_name=model_name, device=device)
-    txt_tokenizer, txt_model = get_text_embedding(embedding_name=text_encoder_name, device=device)
+    txt_model, txt_tokenizer = get_text_embedding(embedding_name=text_encoder_name, device=device)
 
     dataset_train = get_dataset(dataset_name=dataset_name, path=dataset_path,
                                 subset="train", size=train_size, crop_size=train_size)
