@@ -59,7 +59,6 @@ def main():
     parser.add_argument('--print_every', default=6000, type=int, help='Print frequency')
     parser.add_argument('--wandb', action='store_true', help='enable logging using wandb')
     parser.add_argument('--finetune', default=None, type=str, help='First loads weights from the specified checkpoint. Does NOT overwrite autoresume')
-    parser.add_argument('--finetune_disc', default=True, type=bool, help='Toggle finetuning the model and the discriminator')
     parser.add_argument('--autorestart', default=True, type=bool, help='Auto-restart')
 
     # hardware specific stuff
@@ -115,16 +114,13 @@ def main():
 
     dataset_name: str = args.dataset_name #"coco_dataset"
     optimizer: str = args.optimizer
-    optimizer_disc: str = args.optimizer_disc
     scheduler: str = args.scheduler
-    scheduler_disc: str = args.scheduler_disc
     seed: int = args.seed #30071993
 
     print_every: int = args.print_every #3000
 
     device: str = args.device
     finetune: str = args.finetune
-    finetune_disc: bool = args.finetune_disc
     autorestart = args.autorestart #True
     world_size: int = args.world_size #1
     dist_on_itp: bool = args.dist_on_itp #False
@@ -181,10 +177,10 @@ def main():
 
     create_log_dir(log_dir)
     if finetune is not None:
-        load_model_for_finetuneing(finetune, model=model, finetune_disc=finetune_disc)
+        load_model_for_finetuneing(finetune, model=model)
     if check_autoresume_possible(log_dir) and autorestart:
-        start_iter = autoresume(log_dir, model=model, optim=optimizer, desc_optim=optimizer_disc,
-                                sched=scheduler, desc_sched=scheduler_disc, scaler_m=scaler_m)
+        start_iter = autoresume(log_dir, model=model, optim=optimizer,
+                                sched=scheduler, scaler_m=scaler_m)
         print("Resuming from", start_iter)
     else:
         print("No resuming checkpoint was found, starting from scratch")
