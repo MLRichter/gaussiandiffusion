@@ -145,7 +145,7 @@ def main():
     world_size, rank, local_rank, m_group, d_group = init_distributed_mode(dist_on_itp=dist_on_itp, world_size=world_size, tcp=tcp, dist_url=dist_url)
 
 
-    latent_encoder = get_latent_encoder(model_name=latent_encoder_name, device=device, filepath=latent_encoder_weights)
+    latent_encoder = get_latent_encoder(vae_name=latent_encoder_name, device=device, weight_path=latent_encoder_weights)
     model = get_model(model_name=model_name, device=device)
     txt_tokenizer, txt_model = get_text_embedding(model_name=text_encoder_name, device=device)
 
