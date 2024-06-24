@@ -20,7 +20,9 @@ def get_dataset(dataset_name: str, path: str, subset: str, size: int , crop_size
 
 
 def get_model(model_name: str, device: str, *args, **kwargs) -> nn.Module:
-    return model_registry.__dict__[model_name](device, *args, **kwargs)
+    model = model_registry.__dict__[model_name](*args, **kwargs)
+    model.to(device)
+    return model
 
 
 def get_text_embedding(embedding_name: str, device: str, *args, **kwargs) -> Tuple[nn.Module, Tokenizer]:
