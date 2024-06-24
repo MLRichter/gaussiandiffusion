@@ -12,7 +12,7 @@ from torchtools.utils.diffusion2 import DDPMSampler
 from torchvision.transforms import RandomCrop
 from torchtools.utils import Diffuzz2
 from tqdm import tqdm
-from time import time
+import time
 from src.logging_utils import Logger
 from src.training.utils import is_root
 from transformers import AutoTokenizer, CLIPTextModel
