@@ -74,7 +74,7 @@ def train(
             rand_idx = np.random.rand(len(captions)) > 0.05
             captions = [str(c) if keep else "" for c, keep in zip(captions, rand_idx)]
             clip_tokens = tokenizer(captions, truncation=True, padding="max_length",
-                                    max_length=tokenizer.model_max_length, return_tensors="pt")
+                                    max_length=tokenizer.model_max_length, return_tensors="pt").to(device)
             clip_text_embeddings = text_model(**clip_tokens, output_hidden_states=True).last_hidden_state
 
             t = (1-torch.rand(images.size(0), device=device)).add(0.001).clamp(0.001, 1.0)
@@ -192,7 +192,7 @@ def validate(latent_encoder: nn.Module,
             clip_text_embeddings = txt_model(**clip_tokens, output_hidden_states=True).last_hidden_state
 
             clip_tokens_uncond = txt_tokenizer([""]*len(captions), truncation=True, padding="max_length",
-                                        max_length=txt_tokenizer.model_max_length, return_tensors="pt")
+                                        max_length=txt_tokenizer.model_max_length, return_tensors="pt").to(device)
             clip_text_embeddings_uncond = txt_model(**clip_tokens_uncond, output_hidden_states=True).last_hidden_state
 
             t = (1-torch.rand(images.size(0), device=device)).add(0.001).clamp(0.001, 1.0)
