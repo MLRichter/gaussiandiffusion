@@ -181,6 +181,8 @@ def validate(latent_encoder: nn.Module,
                 dataloader_iterator = iter(val_dataloader)
                 images, captions = next(dataloader_iterator)
 
+            images = images.to(device)
+
             # clip stuff
             # ---
             rand_idx = np.random.rand(len(captions)) > 0.05
