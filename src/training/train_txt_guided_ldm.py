@@ -60,10 +60,10 @@ def train(
     for step, i in enumerate(pbar):
 
         try:
-            images, prompt = next(dataloader_iterator)
+            images, captions = next(dataloader_iterator)
         except:
             dataloader_iterator = iter(dataloader)
-            images, prompt = next(dataloader_iterator)
+            images, captions = next(dataloader_iterator)
         images = images.to(device)
         images = crop(images)  # train on 128x128 crops of the images
 
@@ -178,10 +178,10 @@ def validate(latent_encoder: nn.Module,
     with torch.no_grad():
         for step in enumerate(pbar):
             try:
-                images, prompt = next(dataloader_iterator)
+                images, captions = next(dataloader_iterator)
             except:
                 dataloader_iterator = iter(val_dataloader)
-                images, prompt = next(dataloader_iterator)
+                images, captions = next(dataloader_iterator)
 
             # clip stuff
             # ---
