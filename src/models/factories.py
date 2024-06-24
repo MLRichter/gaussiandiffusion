@@ -28,6 +28,7 @@ def get_model(model_name: str, device: str, *args, **kwargs) -> nn.Module:
 def get_text_embedding(embedding_name: str, device: str, *args, **kwargs) -> Tuple[nn.Module, Tokenizer]:
     model, tokenizers = text_embedding_registry.__dict__[embedding_name](device, *args, **kwargs)
     model.eval().requires_grad_(False)
+    model.to(device)
     return model, tokenizers
 
 
