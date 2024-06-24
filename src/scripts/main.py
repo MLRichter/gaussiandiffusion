@@ -1,6 +1,7 @@
 import argparse
 
 import torch
+import torchvision
 
 from torch.utils.data import DataLoader
 
@@ -224,7 +225,7 @@ def main():
         val_dataloader=dataloader_val,
         diffuzz=diffuzz,
         logger=logger,
-        crop=train_crop_size,
+        crop=torchvision.transforms.RandomCrop(train_crop_size),
         val_crop=val_crop_size,
         input_dim=train_crop_size,
         log_path=log_dir,
