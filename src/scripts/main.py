@@ -25,7 +25,7 @@ def main():
     # basic training parameters
     parser.add_argument('--dataset_path', default='../../../coco2017/', type=str, help='Path to dataset')
     parser.add_argument('--log_dir', default='../../output/test_gas2', type=str, help='Directory for logging')
-    parser.add_argument('--start_iter', default=None, type=int, help='Iteration to start training from')
+    parser.add_argument('--start_iter', default=0, type=int, help='Iteration to start training from')
     parser.add_argument('--lr', default=1e-4, type=float, help='Learning rate')
     parser.add_argument('--batch_size', default=2, type=int, help='Batch size')
     parser.add_argument('--update_freq', default=4, type=int, help='Update frequency')
