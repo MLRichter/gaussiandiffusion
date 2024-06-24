@@ -44,7 +44,6 @@ def main():
     parser.add_argument('--latent_encoder_name', default='standard_ctms_v1', type=str, help='Model name')
     parser.add_argument('--latent_encoder_weights', default='standard_ctms_v1', type=str, help='Model name')
     parser.add_argument('--text_encoder_name', default='standard_ctms_v1', type=str, help='Model name')
-    parser.add_argument('--model_name', default='standard_ctms_v1', type=str, help='Model name')
     parser.add_argument('--loss_target', default='v', type=str, help='loss target')
     parser.add_argument('--loss_weighting', default='p2', type=str, help='loss target')
 
