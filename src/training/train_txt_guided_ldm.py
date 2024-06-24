@@ -188,7 +188,7 @@ def validate(latent_encoder: nn.Module,
             rand_idx = np.random.rand(len(captions)) > 0.05
             captions = [str(c) if keep else "" for c, keep in zip(captions, rand_idx)]
             clip_tokens = txt_tokenizer(captions, truncation=True, padding="max_length",
-                                    max_length=txt_tokenizer.model_max_length, return_tensors="pt")
+                                    max_length=txt_tokenizer.model_max_length, return_tensors="pt").to(device)
             clip_text_embeddings = txt_model(**clip_tokens, output_hidden_states=True).last_hidden_state
 
             clip_tokens_uncond = txt_tokenizer([""]*len(captions), truncation=True, padding="max_length",
