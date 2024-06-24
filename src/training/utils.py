@@ -111,12 +111,8 @@ def check_autoresume_possible(log_dir: str):
 def autoresume(log_dir: str,
                model: Module,
                optim: Optimizer,
-               desc_optim: Optimizer,
                sched: LRScheduler,
-               desc_sched: LRScheduler,
-               scaler_m: torch.cuda.amp.GradScaler,
-               scaler_d: torch.cuda.amp.GradScaler,
-               snr_sched: SNR_Scheduler
+               scaler_m: torch.cuda.amp.GradScaler
                ) -> int:
     weight_path = Path(log_dir) / "models" / "model.pt"
     checkpoint = torch.load(weight_path)

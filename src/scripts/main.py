@@ -1,26 +1,20 @@
 import argparse
 
 import torch
-import torchvision.transforms
 
 from torch.utils.data import DataLoader
 
-from src.losses import SNRLoss, KLDivLoss, NormedSNRLoss, NormedAbsoluteSNRLoss, NormedLogSNRLoss, \
-    NormedNoiseOnlySNRLoss, NormedSignalOnlySNRLoss, RelaxedNormedSNRLoss, RelaxedNormalizedPenaltyNormedSNRLoss, \
-    RelaxedPenaltyNormedSNRLoss
 from torchtools.utils import Diffuzz2
 from torchtools.utils.diffusion2 import DDPMSampler
 
-from src.logging_utils import PrintLogger, JsonLogger, JsonWandbLogger, DummyLogger
-from src.models.factories import get_model, get_discriminator, get_dataset, get_optimizer, get_scheduler, \
+from src.logging_utils import JsonLogger, JsonWandbLogger, DummyLogger
+from src.models.factories import get_model, get_dataset, get_optimizer, get_scheduler, \
     get_latent_encoder, get_text_embedding
-from src.training.train_cstm import train_cstm
 
 from src.training.train_txt_guided_ldm import train
 from src.training.utils import create_log_dir, check_autoresume_possible, autoresume, adjust_print_freq, \
     load_model_for_finetuneing
-from src.training.utils import is_root, is_distributed, init_distributed_mode
-from src.target_schedulers import ConstantSNR_Target, LinearSNR_Target
+from src.training.utils import is_distributed, init_distributed_mode
 
 
 
@@ -46,6 +40,10 @@ def main():
 
     # loss weights
     # model selection
+    parser.add_argument('--model_name', default='standard_ctms_v1', type=str, help='Model name')
+    parser.add_argument('--latent_encoder_name', default='standard_ctms_v1', type=str, help='Model name')
+    parser.add_argument('--latent_encoder_weights', default='standard_ctms_v1', type=str, help='Model name')
+    parser.add_argument('--text_encoder_name', default='standard_ctms_v1', type=str, help='Model name')
     parser.add_argument('--model_name', default='standard_ctms_v1', type=str, help='Model name')
     parser.add_argument('--loss_target', default='v', type=str, help='loss target')
     parser.add_argument('--loss_weighting', default='p2', type=str, help='loss target')
@@ -112,7 +110,10 @@ def main():
 
     workers: int = args.workers #4
     model_name: str = args.model_name #"standard_ctms_v1"
-    disc_name: str = args.disc_name #"standard_discriminator_v1"
+    latent_encoder_name = args.latent_encoder_name
+    latent_encoder_weights = args.latent_encoder_weights
+    text_encoder_name = args.text_encoder_name
+
     dataset_name: str = args.dataset_name #"coco_dataset"
     optimizer: str = args.optimizer
     optimizer_disc: str = args.optimizer_disc
@@ -149,9 +150,9 @@ def main():
     world_size, rank, local_rank, m_group, d_group = init_distributed_mode(dist_on_itp=dist_on_itp, world_size=world_size, tcp=tcp, dist_url=dist_url)
 
 
-    latent_encoder = get_latent_encoder(model_name=model_name, device=device, filepath=vae_weights)
+    latent_encoder = get_latent_encoder(model_name=latent_encoder_name, device=device, filepath=latent_encoder_weights)
     model = get_model(model_name=model_name, device=device)
-    txt_tokenizer, txt_model = get_text_embedding(model_name=model_name, device=device)
+    txt_tokenizer, txt_model = get_text_embedding(model_name=text_encoder_name, device=device)
 
     dataset_train = get_dataset(dataset_name=dataset_name, path=dataset_path,
                                 subset="train", size=train_size, crop_size=train_size)
@@ -181,10 +182,10 @@ def main():
 
     create_log_dir(log_dir)
     if finetune is not None:
-        load_model_for_finetuneing(finetune, model=model, disc=disc, finetune_disc=finetune_disc)
+        load_model_for_finetuneing(finetune, model=model, finetune_disc=finetune_disc)
     if check_autoresume_possible(log_dir) and autorestart:
-        start_iter = autoresume(log_dir, model=model, disc=disc, optim=optimizer, desc_optim=optimizer_disc,
-                                sched=scheduler, desc_sched=scheduler_disc, scaler_m=scaler_m, scaler_d=scaler_d, snr_sched=snr_scheduler)
+        start_iter = autoresume(log_dir, model=model, optim=optimizer, desc_optim=optimizer_disc,
+                                sched=scheduler, desc_sched=scheduler_disc, scaler_m=scaler_m)
         print("Resuming from", start_iter)
     else:
         print("No resuming checkpoint was found, starting from scratch")
