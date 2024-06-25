@@ -175,7 +175,7 @@ def validate(latent_encoder: nn.Module,
     pbar = tqdm(range(len(val_dataloader)), "Evaluating")
 
     with torch.no_grad():
-        for step in enumerate(pbar):
+        for step, _ in enumerate(pbar):
             if step >= num_collages:
                 break
             try:
