@@ -211,26 +211,26 @@ def validate(latent_encoder: nn.Module,
                 pred = diffuzz.x0_from_v(noised_latents, pred_v, t)
 
             with torch.cuda.amp.autocast(dtype=dtype):
-                result_cfg_15 = diffuzz.sample(diffusion_model, {
+                result_cfg_15 = list(diffuzz.sample(diffusion_model, {
                     'encoder_hidden_states': clip_text_embeddings, 'return_dict': False
                 }, latents.shape, unconditional_inputs={
                     'encoder_hidden_states': clip_text_embeddings_uncond, 'return_dict': False
-                }, cfg=1.5, t_scaler=(256 // 8) / 256)
+                }, cfg=1.5, t_scaler=(256 // 8) / 256))
 
                 print("DEBUG")
                 print(type(result_cfg_15), result_cfg_15)
 
-                result_cfg_15_uncond = diffuzz.sample(diffusion_model, {
+                result_cfg_15_uncond = list(diffuzz.sample(diffusion_model, {
                     'encoder_hidden_states': clip_text_embeddings_uncond, 'return_dict': False
                 }, latents.shape, unconditional_inputs={
                     'encoder_hidden_states': clip_text_embeddings_uncond, 'return_dict': False
-                }, cfg=1.5, t_scaler=(256 // 8) / 256)
+                }, cfg=1.5, t_scaler=(256 // 8) / 256))
 
-                result_cfg_7 = diffuzz.sample(diffusion_model, {
+                result_cfg_7 = list(diffuzz.sample(diffusion_model, {
                     'encoder_hidden_states': clip_text_embeddings, 'return_dict': False
                 }, latents.shape, unconditional_inputs={
                     'encoder_hidden_states': clip_text_embeddings_uncond, 'return_dict': False
-                }, cfg=7, t_scaler=(256 // 8) / 256)
+                }, cfg=7, t_scaler=(256 // 8) / 256))
 
                 noised_images = torch.cat(
                     [latent_encoder

@@ -67,17 +67,9 @@ if __name__ == '__main__':
     #timestep: Union[torch.Tensor, float, int]
     #encoder_hidden_states: torch.Tensor
 
-    diffuzz = Diffuzz2(device='cpu', scaler=64 / 64, clamp_range=(0, 1 - 1e-7))
+    diffuzz = Diffuzz2(device='cpu', scaler=64 / 64, clamp_range=(0, 1 - 1e-7),)
 
-    class TupleWrapper(nn.Module):
 
-        def __init__(self, module: nn.Module, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self.module = module
-
-        def forward(self, *args, **kwargs):
-            return self.module(*args, **kwargs)[0]
-    model = TupleWrapper(module=model)
     result = diffuzz.sample(model, {
         'encoder_hidden_states': encoder_hidden_state, 'return_dict': False
     }, zeros.shape, unconditional_inputs={
