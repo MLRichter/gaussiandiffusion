@@ -167,7 +167,8 @@ def validate(latent_encoder: nn.Module,
              device: str,
              diffuzz_sampler: DDPMSampler,
              logger: Logger,
-             itr: int
+             itr: int,
+             num_collages: int = 10
              ):
     diffusion_model.eval()
     # TODO: Validation code goes here
@@ -175,6 +176,8 @@ def validate(latent_encoder: nn.Module,
 
     with torch.no_grad():
         for step in enumerate(pbar):
+            if step >= num_collages:
+                break
             try:
                 images, captions = next(dataloader_iterator)
             except:
@@ -217,8 +220,8 @@ def validate(latent_encoder: nn.Module,
                     'encoder_hidden_states': clip_text_embeddings_uncond, 'return_dict': False
                 }, cfg=1.5, t_scaler=(256 // 8) / 256))[-1][0]
 
-                print("DEBUG")
-                print(type(result_cfg_15), result_cfg_15)
+                #print("DEBUG")
+                #print(type(result_cfg_15), result_cfg_15)
 
                 result_cfg_15_uncond = list(diffuzz.sample(diffusion_model, {
                     'encoder_hidden_states': clip_text_embeddings_uncond, 'return_dict': False
@@ -270,7 +273,7 @@ def validate(latent_encoder: nn.Module,
                     torch.cat([i for i in cfg_15_uncond_images.cpu()], dim=-1),
                     torch.cat([i for i in cfg_7_images.cpu()], dim=-1)
                 ], dim=-2)
-                save_path = os.path.join(logger.save_path, "images", f"{itr}.jpg")
+                save_path = os.path.join(logger.save_path, "images", f"{itr}-{step}.jpg")
                 logger.log_images(img, save_path)
 
     diffusion_model.train()
