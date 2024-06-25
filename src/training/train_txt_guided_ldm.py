@@ -215,7 +215,7 @@ def validate(latent_encoder: nn.Module,
                     'encoder_hidden_states': clip_text_embeddings, 'return_dict': False
                 }, latents.shape, unconditional_inputs={
                     'encoder_hidden_states': clip_text_embeddings_uncond, 'return_dict': False
-                }, cfg=1.5, t_scaler=(256 // 8) / 256))
+                }, cfg=1.5, t_scaler=(256 // 8) / 256))[-1][0]
 
                 print("DEBUG")
                 print(type(result_cfg_15), result_cfg_15)
@@ -224,13 +224,13 @@ def validate(latent_encoder: nn.Module,
                     'encoder_hidden_states': clip_text_embeddings_uncond, 'return_dict': False
                 }, latents.shape, unconditional_inputs={
                     'encoder_hidden_states': clip_text_embeddings_uncond, 'return_dict': False
-                }, cfg=1.5, t_scaler=(256 // 8) / 256))
+                }, cfg=1.5, t_scaler=(256 // 8) / 256))[-1][0]
 
                 result_cfg_7 = list(diffuzz.sample(diffusion_model, {
                     'encoder_hidden_states': clip_text_embeddings, 'return_dict': False
                 }, latents.shape, unconditional_inputs={
                     'encoder_hidden_states': clip_text_embeddings_uncond, 'return_dict': False
-                }, cfg=7, t_scaler=(256 // 8) / 256))
+                }, cfg=7, t_scaler=(256 // 8) / 256))[-1][0]
 
 
                 noised_images = torch.cat(
