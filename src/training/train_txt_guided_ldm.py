@@ -270,7 +270,7 @@ def validate(latent_encoder: nn.Module,
                     torch.cat([i for i in cfg_15_uncond_images.cpu()], dim=-1),
                     torch.cat([i for i in cfg_7_images.cpu()], dim=-1)
                 ], dim=-2)
-                save_path = os.path.join(logger.save_path, "collages", f"{itr}.jpg")
+                save_path = os.path.join(logger.save_path, "images", f"{itr}.jpg")
                 logger.log_images(img, save_path)
 
     diffusion_model.train()
