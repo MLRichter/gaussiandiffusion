@@ -121,7 +121,6 @@ class Discriminator(nn.Module):
 
 if __name__ == '__main__':
     from time import time
-    from discrimintors import Discriminator
     device = "cpu" if not torch.cuda.is_available() else "cuda:0"
     model = AutoEncoder().to(device)
     # model = AutoEncoder(c=8*64, encoder_block=4, decoder_block=12, attention_heads=8).to(device)
