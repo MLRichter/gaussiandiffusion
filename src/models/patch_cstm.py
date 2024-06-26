@@ -84,7 +84,7 @@ class AutoEncoder(nn.Module):
         if self.decoder_denorm:
             x = self.denorm(x)
         x = self.decoder(x)
-        return self.out_smoother(x)
+        return x #return self.out_smoother(x)
 
     def forward(self, x):
         x, mu, std, logvar = self.encode(x)
