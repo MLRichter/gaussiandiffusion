@@ -96,12 +96,12 @@ def init_distributed_mode(
                                              world_size=world_size, rank=rank)
     print('| creating subgroups for generator and discriminator')
     model_group = torch.distributed.new_group(ranks=list(range(world_size)))
-    disc_group = torch.distributed.new_group(ranks=list(range(world_size)))
+    #disc_group = torch.distributed.new_group(ranks=list(range(world_size)))
     print("| setup complete, waiting for all node-processes to finish")
-    #torch.distributed.barrier()
+    torch.distributed.barrier()
     print("| done")
     setup_for_distributed(rank == 0)
-    return world_size, rank, gpu,  model_group, disc_group
+    return world_size, rank, gpu,  model_group, None
 
 
 def check_autoresume_possible(log_dir: str):
