@@ -143,7 +143,7 @@ def main():
     print_every = adjust_print_freq(print_every=print_every, update_freq=update_freq)
     torch.backends.cuda.matmul.allow_tf32 = True
     torch.backends.cudnn.allow_tf32 = True
-    world_size, rank, local_rank, m_group, d_group = init_distributed_mode(dist_on_itp=dist_on_itp, world_size=world_size, tcp=tcp, dist_url=dist_url)
+    world_size, rank, local_rank = init_distributed_mode(dist_on_itp=dist_on_itp, world_size=world_size, tcp=tcp, dist_url=dist_url)
 
 
     latent_encoder = get_latent_encoder(vae_name=latent_encoder_name, device=device, weight_path=latent_encoder_weights)
@@ -198,7 +198,7 @@ def main():
         wandb.watch(model)
     if is_distributed(world_size):
         model.to(device)
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], process_group=m_group, broadcast_buffers=True, find_unused_parameters=True)
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], broadcast_buffers=True, find_unused_parameters=True)
 
 
     print()
