@@ -130,6 +130,12 @@ def main():
     disable_grad_scaling: bool = args.disable_grad_scaling
 
 
+
+    print_every = adjust_print_freq(print_every=print_every, update_freq=update_freq)
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
+    world_size, rank, local_rank = init_distributed_mode(dist_on_itp=dist_on_itp, world_size=world_size, tcp=tcp, dist_url=dist_url)
+
     # TODO: Rebuild for Diffuzz impl
     if loss_target == 'e':
         diffuzz = Diffuzz2(device=device, scaler=1, clamp_range=(0.0001, 0.9999))
@@ -139,12 +145,6 @@ def main():
         diffuzz_sampler = None
     else:
         raise ValueError(f"{loss_target} loss_target not recognized")
-
-    print_every = adjust_print_freq(print_every=print_every, update_freq=update_freq)
-    torch.backends.cuda.matmul.allow_tf32 = True
-    torch.backends.cudnn.allow_tf32 = True
-    world_size, rank, local_rank = init_distributed_mode(dist_on_itp=dist_on_itp, world_size=world_size, tcp=tcp, dist_url=dist_url)
-
 
     latent_encoder = get_latent_encoder(vae_name=latent_encoder_name, device=device, weight_path=latent_encoder_weights)
     model = get_model(model_name=model_name, device=device)
