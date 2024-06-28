@@ -45,7 +45,7 @@ def is_distributed(world_size: int) -> bool:
 
 
 def init_distributed_mode(
-        dist_on_itp: bool, world_size: int = None, tcp=False, dist_url: str = 'env://'):
+        dist_on_itp: bool, world_size: int = None, tcp=False, dist_url: str = 'env://', is_determined: bool = True):
 
     if dist_on_itp:
         rank = int(os.environ['OMPI_COMM_WORLD_RANK'])
@@ -56,6 +56,16 @@ def init_distributed_mode(
         os.environ['RANK'] = str(rank)
         os.environ['WORLD_SIZE'] = str(world_size)
         # ["RANK", "WORLD_SIZE", "MASTER_ADDR", "MASTER_PORT", "LOCAL_RANK"]
+    elif is_determined:
+        import determined as det
+        info = det.get_cluster_info()
+        num_nodes = info.container_rank
+        proc_per_node = len(info.slot_ids)
+        node_rank = len(info.container_addr)
+        world_size = num_nodes * proc_per_node
+        gpu = int(os.environ['RANK'])
+        rank = (proc_per_node * node_rank) + gpu
+
     elif 'RANK' in os.environ and 'WORLD_SIZE' in os.environ:
         rank = int(os.environ["RANK"])
         world_size = int(os.environ['WORLD_SIZE'])
