@@ -45,7 +45,7 @@ def is_distributed(world_size: int) -> bool:
 
 
 def init_distributed_mode(
-        dist_on_itp: bool, world_size: int = None, tcp=False, dist_url: str = 'env://', is_determined: bool = True):
+        dist_on_itp: bool, world_size: int = None, tcp=False, dist_url: str = 'env://', is_determined: bool = False):
 
     if dist_on_itp:
         rank = int(os.environ['OMPI_COMM_WORLD_RANK'])
