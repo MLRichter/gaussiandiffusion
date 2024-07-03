@@ -174,7 +174,7 @@ def validate(latent_encoder: nn.Module,
     diffusion_model.eval()
     # TODO: Validation code goes here
     pbar = tqdm(range(len(val_dataloader)), "Evaluating")
-
+    losses = []
     with torch.no_grad():
         for step, _ in enumerate(pbar):
 
@@ -278,8 +278,9 @@ def validate(latent_encoder: nn.Module,
                     save_path = os.path.join(logger.save_path, "images", f"{itr}-{step}.jpg")
                     logger.log_images(img, save_path)
                 denoise_recon_loss = nn.functional.mse_loss(noised_images, images).detach().cpu().item()
-                logger.log_metrics({
-                    "val_mse_loss": denoise_recon_loss
-                })
+                losses.append(denoise_recon_loss)
+        logger.log_metrics({
+            "val_mse_loss": np.mean(losses)
+        })
 
     diffusion_model.train()
