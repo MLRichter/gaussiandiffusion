@@ -42,10 +42,10 @@ def common_canvas(data_path: str = HORRIBLE_CC_FILEPATH, subset: str = "train", 
     CC_CACHE = dataset
     if subset == "train":
         size = len(dataset)
-        subset = torch.utils.data.Subset(dataset=dataset, indices=list(range(size - 10000)))
+        subset = torch.utils.data.Subset(dataset=dataset, indices=list(range(size - 500)))
     elif subset == "val":
         size = len(dataset)
-        subset = torch.utils.data.Subset(dataset=dataset, indices=list(range(size - 10000, size)))
+        subset = torch.utils.data.Subset(dataset=dataset, indices=list(range(size - 500, size)))
     else:
         subset = dataset
     return subset
