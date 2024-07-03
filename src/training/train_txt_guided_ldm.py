@@ -48,7 +48,7 @@ def train(
     latent_encoder.to(device)
     diffusion_model.to(device)
     text_model.to(device)
-    ema_loss, ema_d_loss, ema_g_loss, ema_var_loss, ema_lpips_loss = None, None, None, None, None
+    ema_loss, ema_mse_loss, ema_g_loss, ema_var_loss, ema_lpips_loss = None, None, None, None, None
     dataloader_iterator = iter(dataloader)
     pbar = tqdm(range(start_iter, total_updates), initial=start_iter if start_iter == 1 else start_iter+1, total=total_updates)
     time.sleep(1)
@@ -115,6 +115,7 @@ def train(
         if not np.isnan(loss.mean().item()):
             ema_loss = loss.mean().item() if ema_loss is None else ema_loss * 0.99 + loss.mean().item() * 0.01
         grad_norm = nn.utils.clip_grad_norm_(diffusion_model.parameters(), 1.0)
+
 
         # Logging
         metrics = {
@@ -276,11 +277,9 @@ def validate(latent_encoder: nn.Module,
                     ], dim=-2)
                     save_path = os.path.join(logger.save_path, "images", f"{itr}-{step}.jpg")
                     logger.log_images(img, save_path)
-                recon_loss = nn.functional.mse_loss(pred_images, images).detach().cpu().item()
                 denoise_recon_loss = nn.functional.mse_loss(noised_images, images).detach().cpu().item()
                 logger.log_metrics({
-                    "val_mse_loss": recon_loss,
-                    "val_mse_denoise_loss": denoise_recon_loss
+                    "val_mse_loss": denoise_recon_loss
                 })
 
     diffusion_model.train()
