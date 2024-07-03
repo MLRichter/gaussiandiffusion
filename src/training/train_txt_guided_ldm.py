@@ -176,8 +176,7 @@ def validate(latent_encoder: nn.Module,
 
     with torch.no_grad():
         for step, _ in enumerate(pbar):
-            if step >= num_collages:
-                break
+
             try:
                 images, captions = next(dataloader_iterator)
             except:
@@ -247,33 +246,41 @@ def validate(latent_encoder: nn.Module,
                      .decode
                      (pred[i:i + 1])
                      .clamp(0, 1) for i in range(len(pred))], dim=0)
+                
+                if step <= num_collages:
+                    cfg_15_images = torch.cat(
+                        [latent_encoder
+                        .decode(result_cfg_15[i:i + 1])
+                        .clamp(0, 1) for i in range(len(result_cfg_15))], dim=0)
 
-                cfg_15_images = torch.cat(
-                    [latent_encoder
-                     .decode(result_cfg_15[i:i + 1])
-                     .clamp(0, 1) for i in range(len(result_cfg_15))], dim=0)
+                    cfg_15_uncond_images = torch.cat(
+                        [latent_encoder
+                        .decode
+                        (result_cfg_15_uncond[i:i + 1])
+                        .clamp(0, 1) for i in range(len(result_cfg_15))], dim=0)
 
-                cfg_15_uncond_images = torch.cat(
-                    [latent_encoder
-                     .decode
-                     (result_cfg_15_uncond[i:i + 1])
-                     .clamp(0, 1) for i in range(len(result_cfg_15))], dim=0)
+                    cfg_7_images = torch.cat(
+                        [latent_encoder
+                        .decode
+                        (result_cfg_7[i:i + 1])
+                        .clamp(0, 1) for i in range(len(result_cfg_15))], dim=0)
 
-                cfg_7_images = torch.cat(
-                    [latent_encoder
-                     .decode
-                     (result_cfg_7[i:i + 1])
-                     .clamp(0, 1) for i in range(len(result_cfg_15))], dim=0)
-
-                img = torch.cat([
-                    torch.cat([i for i in images.cpu()], dim=-1),
-                    torch.cat([i for i in noised_images.cpu()], dim=-1),
-                    torch.cat([i for i in pred_images.cpu()], dim=-1),
-                    torch.cat([i for i in cfg_15_images.cpu()], dim=-1),
-                    torch.cat([i for i in cfg_15_uncond_images.cpu()], dim=-1),
-                    torch.cat([i for i in cfg_7_images.cpu()], dim=-1)
-                ], dim=-2)
-                save_path = os.path.join(logger.save_path, "images", f"{itr}-{step}.jpg")
-                logger.log_images(img, save_path)
+                
+                    img = torch.cat([
+                        torch.cat([i for i in images.cpu()], dim=-1),
+                        torch.cat([i for i in noised_images.cpu()], dim=-1),
+                        torch.cat([i for i in pred_images.cpu()], dim=-1),
+                        torch.cat([i for i in cfg_15_images.cpu()], dim=-1),
+                        torch.cat([i for i in cfg_15_uncond_images.cpu()], dim=-1),
+                        torch.cat([i for i in cfg_7_images.cpu()], dim=-1)
+                    ], dim=-2)
+                    save_path = os.path.join(logger.save_path, "images", f"{itr}-{step}.jpg")
+                    logger.log_images(img, save_path)
+                recon_loss = nn.functional.mse_loss(pred_images, images).detach().cpu().item()
+                denoise_recon_loss = nn.functional.mse_loss(noised_images, images).detach().cpu().item()
+                logger.log_metrics({
+                    "val_mse_loss": recon_loss,
+                    "val_mse_denoise_loss": denoise_recon_loss
+                })
 
     diffusion_model.train()
