@@ -17,6 +17,7 @@ from src.logging_utils import Logger
 from src.training.utils import is_root
 from transformers import AutoTokenizer, CLIPTextModel
 import numpy as np
+import lpips
 
 
 def train(
@@ -171,6 +172,7 @@ def validate(latent_encoder: nn.Module,
              itr: int,
              num_collages: int = 10
              ):
+    lpips_criterion = lpips.LPIPS(net='vgg').to(device)
     diffusion_model.eval()
     # TODO: Validation code goes here
     pbar = tqdm(range(len(val_dataloader)), "Evaluating")
@@ -277,10 +279,12 @@ def validate(latent_encoder: nn.Module,
                     ], dim=-2)
                     save_path = os.path.join(logger.save_path, "images", f"{itr}-{step}.jpg")
                     logger.log_images(img, save_path)
-                denoise_recon_loss = nn.functional.mse_loss(noised_images, images).detach().cpu().item()
+                denoise_recon_loss = nn.functional.mse_loss(pred_images, images).detach().cpu().item()
+                lpips_loss = lpips_criterion(pred_images, images).mean().cpu().item()
                 losses.append(denoise_recon_loss)
         logger.log_metrics({
-            "val_mse_loss": np.mean(losses)
+            "val_mse_loss": np.mean(losses),
+            "val_lpips_loss": np.mean(lpips_loss)
         })
 
     diffusion_model.train()
