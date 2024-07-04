@@ -177,6 +177,7 @@ def validate(latent_encoder: nn.Module,
     # TODO: Validation code goes here
     pbar = tqdm(range(len(val_dataloader)), "Evaluating")
     losses = []
+    lpips_losses = []
     with torch.no_grad():
         for step, _ in enumerate(pbar):
 
@@ -281,6 +282,7 @@ def validate(latent_encoder: nn.Module,
                     logger.log_images(img, save_path)
                 denoise_recon_loss = nn.functional.mse_loss(pred_images, images).detach().cpu().item()
                 lpips_loss = lpips_criterion(pred_images, images).mean().cpu().item()
+                lpips_losses.append(lpips_loss)
                 losses.append(denoise_recon_loss)
         logger.log_metrics({
             "val_mse_loss": np.mean(losses),
