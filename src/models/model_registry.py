@@ -21,7 +21,10 @@ def unet_872M():
         sample_size=(16, 256 // 8, 256 // 8),  # the target image resolution
         in_channels=16,  # the number of input channels, 3 for RGB images
         out_channels=16,  # the number of output channels
+        resnet_time_scale_shift='scale_shift',
     )
+    resnet_time_scale_shift = 'scale_shift',
+
     return TupleWrapper(model)
 
 
@@ -32,6 +35,8 @@ def unet_225M():
         out_channels=16, block_out_channels=(320 // 2, 640 // 2, 1280 // 2, 1280 // 2)
 
     )
+    resnet_time_scale_shift = 'scale_shift',
+
     return TupleWrapper(model)
 
 def unet_160M():
@@ -41,6 +46,8 @@ def unet_160M():
         out_channels=16, block_out_channels=(128, 256, 512, 512)
 
     )
+    resnet_time_scale_shift = 'scale_shift',
+
     return TupleWrapper(model)
 
 def unet_40M():
@@ -50,6 +57,8 @@ def unet_40M():
         out_channels=16, block_out_channels=(64, 128, 256, 256)
 
     )
+    resnet_time_scale_shift = 'scale_shift',
+
     return TupleWrapper(model)
 
 

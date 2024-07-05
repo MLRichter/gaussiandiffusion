@@ -2,9 +2,11 @@ import os
 
 import torch
 import torchvision
+from diffusers import DDPMScheduler
 from tokenizers import Tokenizer
 from torch.nn import Module
 from torch import nn
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from torch.optim.optimizer import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
@@ -20,18 +22,31 @@ import numpy as np
 import lpips
 
 
-def stratified_random_sampling(num_samples):
-    # Divide the interval [0, 1] into `num_samples` strata
-    strata_edges = torch.linspace(0, 1, num_samples + 1)
+def compute_snr(noise_scheduler, timesteps):
+    """
+    Computes SNR as per
+    https://github.com/TiankaiHang/Min-SNR-Diffusion-Training/blob/521b624bd70c67cee4bdf49225915f5945a872e3/guided_diffusion/gaussian_diffusion.py#L847-L849
+    """
+    alphas_cumprod = noise_scheduler.alphas_cumprod
+    sqrt_alphas_cumprod = alphas_cumprod**0.5
+    sqrt_one_minus_alphas_cumprod = (1.0 - alphas_cumprod) ** 0.5
 
-    # Sample one random point within each stratum and perturb it
-    samples = []
-    for i in range(num_samples):
-        start, end = strata_edges[i], strata_edges[i + 1]
-        sample = torch.distributions.Uniform(start, end).sample()
-        samples.append(sample)
+    # Expand the tensors.
+    # Adapted from https://github.com/TiankaiHang/Min-SNR-Diffusion-Training/blob/521b624bd70c67cee4bdf49225915f5945a872e3/guided_diffusion/gaussian_diffusion.py#L1026
+    sqrt_alphas_cumprod = sqrt_alphas_cumprod.to(device=timesteps.device)[timesteps].float()
+    while len(sqrt_alphas_cumprod.shape) < len(timesteps.shape):
+        sqrt_alphas_cumprod = sqrt_alphas_cumprod[..., None]
+    alpha = sqrt_alphas_cumprod.expand(timesteps.shape)
 
-    return torch.tensor(samples)
+    sqrt_one_minus_alphas_cumprod = sqrt_one_minus_alphas_cumprod.to(device=timesteps.device)[timesteps].float()
+    while len(sqrt_one_minus_alphas_cumprod.shape) < len(timesteps.shape):
+        sqrt_one_minus_alphas_cumprod = sqrt_one_minus_alphas_cumprod[..., None]
+    sigma = sqrt_one_minus_alphas_cumprod.expand(timesteps.shape)
+
+    # Compute SNR.
+    snr = (alpha / sigma) ** 2
+    return snr
+
 
 def train(
         latent_encoder: Module,
@@ -71,6 +86,10 @@ def train(
 
 
     total_gradient_updates: int = 0
+    input_perturbation = 0.1
+    noise_offset = 0.0
+    snr_gamma = 0.5
+    noise_scheduler = DDPMScheduler(prediction_type=loss_target)
     for step, i in enumerate(pbar):
 
         try:
@@ -91,44 +110,56 @@ def train(
                                     max_length=tokenizer.model_max_length, return_tensors="pt").to(device)
             clip_text_embeddings = text_model(**clip_tokens, output_hidden_states=True).last_hidden_state
 
-            #t = (1-torch.rand(images.size(0), device=device)).add(0.001).clamp(0.001, 1.0)
-            t = stratified_random_sampling(images.size(0)).to(device).add(0.001).clamp(0.001, 1.0)
+            t = (1-torch.rand(images.size(0), device=device)).add(0.001).clamp(0.001, 1.0)
             t = diffuzz.scale_t(t, input_dim/256)
             latents = latent_encoder.encode(images)[0]
-            noised_latents, noise = diffuzz.diffuse(latents, t)
-            target_v = diffuzz.get_v(latents, t, noise)
+            bsz = latents.shape[0]
+            noise = torch.randn_like(latents)
+            noise += noise_offset * torch.randn(
+                        (latents.shape[0], latents.shape[1], 1, 1), device=latents.device
+                    )
+            new_noise = noise + input_perturbation * torch.randn_like(noise)
 
-        if loss_target == 'e':
-            if loss_weighting == 'p2':
-                loss_w = diffuzz.p2_weight(t)
-            else:
-                loss_w = 1.0
-            pred_e = diffusion_model(noised_latents, t, clip_text_embeddings, return_dict=False)
-            loss = nn.functional.mse_loss(pred_e, noise, reduction='none').mean(dim=[1, 2, 3])
-            loss_adjusted = (loss * loss_w).mean() / update_freq
-        elif loss_target == 'v':
-            if loss_weighting == 'truncatedSNR':
-                loss_w = diffuzz.truncated_snr_weight(t, min=1.0) / (diffuzz.truncated_snr_weight(t, min=None) + 1)
-            else:
-                loss_w = 1.0
-            pred_v = diffusion_model(noised_latents, t, clip_text_embeddings, return_dict=False)
-            loss = nn.functional.mse_loss(pred_v, target_v, reduction='none').mean(dim=[1, 2, 3])
-            loss_adjusted = (loss * loss_w).mean() / update_freq
+            timesteps = torch.randint(0, noise_scheduler.config.num_train_timesteps, (bsz,), device=latents.device)
+            timesteps = timesteps.long()
+            noisy_latents = noise_scheduler.add_noise(latents, new_noise, timesteps)
+
+
+        if loss_target == "epsilon":
+            target = noise
+        elif loss_target == "v_prediction":
+            target = noise_scheduler.get_velocity(latents, noise, timesteps)
         else:
-            raise NotImplementedError()
+            raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
 
+        model_pred = diffusion_model(noisy_latents, timesteps, clip_text_embeddings, return_dict=False)[0]
+        # Compute loss-weights as per Section 3.4 of https://arxiv.org/abs/2303.09556.
+        # Since we predict the noise instead of x_0, the original formulation is slightly changed.
+        # This is discussed in Section 4.2 of the same paper.
+        snr = compute_snr(noise_scheduler, timesteps)
+        mse_loss_weights = torch.stack([snr, snr_gamma * torch.ones_like(timesteps)], dim=1).min(
+            dim=1
+        )[0]
+        if noise_scheduler.config.prediction_type == "epsilon":
+            mse_loss_weights = mse_loss_weights / snr
+        elif noise_scheduler.config.prediction_type == "v_prediction":
+            mse_loss_weights = mse_loss_weights / (snr + 1)
+
+        loss = F.mse_loss(model_pred.float(), target.float(), reduction="none")
+        loss = loss.mean(dim=list(range(1, len(loss.shape)))) * mse_loss_weights
+        loss = loss.mean()
         if i % update_freq == 0:
-            loss_adjusted.backward()
+            loss.backward()
             grad_norm = nn.utils.clip_grad_norm_(diffusion_model.parameters(), 1.0)
             optimizer.step()
             scheduler.step()
             optimizer.zero_grad(set_to_none=True)
         else:
             with diffusion_model.no_sync():
-                loss_adjusted.backward()
+                loss.backward()
 
-        if not np.isnan(loss.mean().item()):
-            ema_loss = loss.mean().item() if ema_loss is None else ema_loss * 0.99 + loss.mean().item() * 0.01
+        if not np.isnan(loss.item()):
+            ema_loss = loss.item() if ema_loss is None else ema_loss * 0.99 + loss.mean().item() * 0.01
         grad_norm = nn.utils.clip_grad_norm_(diffusion_model.parameters(), 1.0)
 
 
@@ -146,11 +177,6 @@ def train(
         pbar.set_postfix(metrics)
 
         if (i == 0 or i % print_every == 0) and is_root(rank):
-
-
-
-
-
             # TODO: Generate Images
             validate(
                 latent_encoder=latent_encoder,
