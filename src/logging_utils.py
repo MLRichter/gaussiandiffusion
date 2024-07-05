@@ -63,7 +63,7 @@ class JsonLogger:
 
 class JsonWandbLogger:
     def __init__(self, save_path: str, project_name: str = "VAE-Diffusion-Train", **kwargs):
-        name = _postprocess_model_name(kwargs['model_name'])
+        name = _postprocess_model_name(f"{kwargs['latent_encoder_name']}-{kwargs['model_name']}-{kwargs['text_encoder_name']}")
 
         self.save_path = save_path
         if (Path(self.save_path) / "id.wandb").exists():
