@@ -6,12 +6,21 @@ from torch import nn
 from src.models.building_block import SimpleBlock, LayerNorm2d, GlobalBatchNorm2d, TotalBatchNorm2d
 
 
+class DataClass:
+
+    def __init__(self, c_latent: int, sample_size: int):
+        self.block_out_channels = c_latent
+        self.sample_size = sample_size
+        self.scaling_factor = 0.185
+
+
 class AutoEncoder(nn.Module):
     def __init__(self, c_in=3, c=8*64, c_latent=16, encoder_block=9, decoder_block=18, compression_factor=8,
-                 attention_heads=None, dropout=0.1, is_vae: bool = False, decoder_denorm: bool = False, enc_norm: str = 'bn'):
+                 attention_heads=None, dropout=0.1, is_vae: bool = False, decoder_denorm: bool = False, enc_norm: str = 'bn', return_tuple: bool = False):
         super().__init__()    
         
         levels = int(np.log2(compression_factor))
+        self.config = DataClass(c_latent=(c_latent,), sample_size=128)
         
         # ENCODER
         self.in_smoother = nn.Sequential(
@@ -65,6 +74,7 @@ class AutoEncoder(nn.Module):
         )
         self.is_vae = is_vae
         self.decoder_denorm = decoder_denorm
+        self.return_tuple = return_tuple
 
     def denorm(self, x):
         mu, var = self.norm.running_mean, self.norm.running_var
@@ -72,7 +82,7 @@ class AutoEncoder(nn.Module):
         x = torch.nn.functional.batch_norm(x, -mu, torch.ones_like(var))
         return x
         
-    def encode(self, x):
+    def encode(self, x, **kwargs):
         x = self.in_smoother(x)
         x = self.encoder(x)
         mu, logvar = x.chunk(2, dim=1)
@@ -80,13 +90,17 @@ class AutoEncoder(nn.Module):
         x = torch.randn_like(std) * std + mu
         return self.norm(x), mu, std, logvar
 
-    def decode(self, x):
+    def decode(self, x, **kwargs):
         if self.decoder_denorm:
             x = self.denorm(x)
         x = self.decoder(x)
-        return x #return self.out_smoother(x)
+        return_tuple = self.return_tuple if "return_tuple" not in kwargs else kwargs["return_tuple"]
+        if return_tuple:
+            return x,  #return self.out_smoother(x)
+        else:
+            return x  #return self.out_smoother(x)
 
-    def forward(self, x):
+    def forward(self, x, **kwargs):
         x, mu, std, logvar = self.encode(x)
         x = self.decoder(x)
         return x, mu, std, logvar

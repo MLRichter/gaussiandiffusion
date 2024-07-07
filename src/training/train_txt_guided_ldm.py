@@ -33,6 +33,11 @@ def stratified_random_sampling(num_samples):
 
     return torch.tensor(samples)
 
+def integer_sampling(num_samples, device):
+    timesteps = torch.randint(0, 1000, (num_samples,), device=device)
+    timesteps = timesteps.long()
+    return timesteps
+
 def train(
         latent_encoder: Module,
         diffusion_model: Module,
@@ -92,7 +97,8 @@ def train(
             clip_text_embeddings = text_model(**clip_tokens, output_hidden_states=True).last_hidden_state
 
             #t = (1-torch.rand(images.size(0), device=device)).add(0.001).clamp(0.001, 1.0)
-            t = stratified_random_sampling(images.size(0)).to(device).add(0.001).clamp(0.001, 1.0)
+            #t = stratified_random_sampling(images.size(0)).to(device).add(0.001).clamp(0.001, 1.0)
+            t = integer_sampling(images.size(0), device)
             t = diffuzz.scale_t(t, input_dim/256)
             latents = latent_encoder.encode(images)[0]
             noised_latents, noise = diffuzz.diffuse(latents, t)

@@ -18,7 +18,7 @@ class TupleWrapper(nn.Module):
 
 def unet_872M():
     model = UNet2DConditionModel(
-        sample_size=(16, 256 // 8, 256 // 8),  # the target image resolution
+        sample_size=128//8,  # the target image resolution
         in_channels=16,  # the number of input channels, 3 for RGB images
         out_channels=16,  # the number of output channels
         resnet_time_scale_shift='scale_shift',
@@ -30,7 +30,7 @@ def unet_872M():
 
 def unet_225M():
     model = UNet2DConditionModel(
-        sample_size=(16, 256 // 8, 256 // 8),  # the target image resolution
+        sample_size=128//8,  # the target image resolution
         in_channels=16,  # the number of input channels, 3 for RGB images
         out_channels=16, block_out_channels=(320 // 2, 640 // 2, 1280 // 2, 1280 // 2)
 
@@ -41,7 +41,7 @@ def unet_225M():
 
 def unet_160M():
     model = UNet2DConditionModel(
-        sample_size=(16, 256 // 8, 256 // 8),  # the target image resolution
+        sample_size=128//8,  # the target image resolution
         in_channels=16,  # the number of input channels, 3 for RGB images
         out_channels=16, block_out_channels=(128, 256, 512, 512)
 
@@ -52,7 +52,7 @@ def unet_160M():
 
 def unet_40M():
     model = UNet2DConditionModel(
-        sample_size=(16, 256 // 8, 256 // 8),  # the target image resolution
+        sample_size=128//8,  # the target image resolution
         in_channels=16,  # the number of input channels, 3 for RGB images
         out_channels=16, block_out_channels=(64, 128, 256, 256)
 

@@ -34,8 +34,9 @@ def get_text_embedding(embedding_name: str, device: str, *args, **kwargs) -> Tup
 
 def get_latent_encoder(vae_name: str, weight_path: str, device: str, *args, **kwargs) -> nn.Module:
     vae = vae_registry.__dict__[vae_name](device=device, *args, **kwargs)
-    checkpoint = torch.load(weight_path)
-    vae.load_state_dict(checkpoint['state_dict'])  # , strict=False)
+    if weight_path is not None:
+        checkpoint = torch.load(weight_path)
+        vae.load_state_dict(checkpoint['state_dict'])  # , strict=False)
     vae.eval().requires_grad_(False)
     return vae
 
